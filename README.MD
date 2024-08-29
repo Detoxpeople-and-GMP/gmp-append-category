@@ -27,6 +27,11 @@
 
 ## Changelog
 
+### 1.0.1
+
+- Alllow seelction of multiple categories
+
+
 ### 1.0
 
 - Initial release of the plugin.
