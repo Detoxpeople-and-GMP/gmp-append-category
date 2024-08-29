@@ -2,7 +2,7 @@
 /*
 Plugin Name: GMP Append Category to Products
 Description: Select a category and products to append the category to the selected products.
-Version: 1.0
+Version: 1.0.1
 Author: ShalomT
 */
 
@@ -45,20 +45,16 @@ function gmp_append_category_page()
     <div class="wrap">
         <h1>Append Category to Products</h1>
         <form method="post">
-        <input type="hidden" name="gmp_save_category" value="1">
+            <input type="hidden" name="gmp_save_category" value="1">
             <table class="form-table">
                 <tr valign="top">
-                    <th scope="row"><label for="gmp_category">Select Category</label></th>
+                    <th scope="row"><label for="gmp_categories">Select Categories</label></th>
                     <td>
-                        <select name="gmp_category" id="gmp_category">
-                            <?php foreach ($categories as $category): ?>
-                                <option value="<?php echo esc_attr($category->term_id); ?>">
-                                    <?php echo esc_html($category->name); ?>
-                                </option>
-                            <?php endforeach; ?>
-                        </select>
+                        <select name="gmp_categories[]" id="gmp_categories" multiple style="width: 100%;"></select>
+                        <p class="description">Start typing to search for categories.</p>
                     </td>
                 </tr>
+
                 <tr valign="top">
                     <th scope="row"><label for="gmp_products">Search and Select Products</label></th>
                     <td>
@@ -96,8 +92,32 @@ function gmp_append_category_page()
                 placeholder: 'Search for products',
                 allowClear: true
             });
+
+            $('#gmp_categories').select2({
+                ajax: {
+                    url: ajaxurl,
+                    dataType: 'json',
+                    delay: 250,
+                    data: function (params) {
+                        return {
+                            q: params.term, // search term
+                            action: 'gmp_search_categories'
+                        };
+                    },
+                    processResults: function (data) {
+                        return {
+                            results: data
+                        };
+                    },
+                    cache: true
+                },
+                minimumInputLength: 3,
+                placeholder: 'Search for categories',
+                allowClear: true
+            });
         });
     </script>
+
 
     <?php
 }
@@ -139,6 +159,41 @@ function gmp_search_products()
     wp_send_json($results);
 }
 
+add_action('wp_ajax_gmp_search_categories', 'gmp_search_categories');
+
+function gmp_search_categories()
+{
+    if (!current_user_can('manage_woocommerce')) {
+        wp_send_json_error();
+        return;
+    }
+
+    // Get the search term
+    $search_term = isset($_GET['q']) ? sanitize_text_field($_GET['q']) : '';
+
+    // Query categories matching the search term
+    $args = [
+        'taxonomy' => 'product_cat',
+        'hide_empty' => false,
+        'name__like' => $search_term,
+        'number' => 10,
+    ];
+
+    $categories = get_terms($args);
+    $results = [];
+
+    if (!is_wp_error($categories)) {
+        foreach ($categories as $category) {
+            $results[] = [
+                'id' => $category->term_id,
+                'text' => $category->name,
+            ];
+        }
+    }
+
+    wp_send_json($results);
+}
+
 
 add_action('admin_enqueue_scripts', 'gmp_enqueue_scripts');
 
@@ -155,26 +210,27 @@ function gmp_enqueue_scripts($hook)
 
 function gmp_handle_form_submission()
 {
-    if (!isset($_POST['gmp_category']) || !isset($_POST['gmp_products'])) {
+    if (!isset($_POST['gmp_categories']) || !isset($_POST['gmp_products'])) {
         return;
     }
 
-    $category_id = intval($_POST['gmp_category']);
+    $category_ids = array_map('intval', $_POST['gmp_categories']);
     $product_ids = array_map('intval', $_POST['gmp_products']);
 
     foreach ($product_ids as $product_id) {
-        wp_set_object_terms($product_id, $category_id, 'product_cat', true);
+        foreach ($category_ids as $category_id) {
+            wp_set_object_terms($product_id, $category_id, 'product_cat', true);
+        }
     }
 
-    add_option('gmp_success_message', 'Category successfully appended to the selected products.');
+    add_option('gmp_success_message', 'Categories successfully appended to the selected products.');
 }
 
-add_action('admin_notices', 'gmp_show_success_message');
 
 function gmp_show_success_message()
 {
     if ($message = get_option('gmp_success_message')) {
         echo '<div class="updated notice"><p>' . esc_html($message) . '</p></div>';
-        delete_option('gmp_success_message'); 
+        delete_option('gmp_success_message');
     }
 }
