@@ -1,10 +1,11 @@
 # GMP Append Category to Products
 
 **Version:** 1.0  
-**Author:** ShalomT  
+**Author:** detoxpeople  
 **Description:** A WordPress plugin for WooCommerce that allows store administrators to append categories to selected products via an easy-to-use admin interface.
 
 ## Features
+
 - Select a category from the list of all product categories.
 - Search and select products dynamically using AJAX-based search.
 - Append the selected category to multiple products at once.

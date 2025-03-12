@@ -3,7 +3,7 @@
 Plugin Name: GMP Append Category to Products
 Description: Select a category and products to append the category to the selected products.
 Version: 1.0.1
-Author: ShalomT
+Author: detoxpeople
 */
 
 if (!defined('ABSPATH')) {
